@@ -1,4 +1,4 @@
-//milestone 2 - andyg 
+//milestone 2 - andyg
 #pragma once
 
 #include <string>
@@ -16,14 +16,16 @@ const int DEFAULT_SIZE = 1024;
 
 class MySocket {
 private:
-    char* Buffer;
-    SOCKET ConnectionSocket;
-    sockaddr_in SvrAddr;
-    SocketType mySocket;
-    std::string IPAddr;
-    int Port;
-    ConnectionType connectionType;
-    int MaxSize;
+    char* Buffer;//to dynamically allocate RAW buffer space for communication activities
+    SOCKET WelcomeSocket;//used by a MySocket object configured as a TCP/IP Server
+    SOCKET ConnectionSocket;//used for client/server communications (both TCP and UDP)
+    struct sockaddr_in SvrAddr;//to store connection information
+    SocketType mySocket;//t to hold the type of socket the MySocket object is initialized to
+    std::string IPAddr;//to hold the IPv4 IP Address string
+    int Port;//to hold the port number to be used
+    ConnectionType connectionType;//to define the Transport Layer protocol being used (TCP/UDP)
+    bool bTCPConnect; //flag to determine if a connection has been established or not
+    int MaxSize; //store the maximum number of bytes the buffer is allocated to
 
 public:
     MySocket(SocketType type, std::string ipAddress, unsigned int port,
@@ -39,6 +41,8 @@ public:
     void SetPort(int port);
     SocketType GetType();
     void SetType(SocketType type);
+    void ConnectTCP();
+    void DisconnectTCP();
 
 private:
     void Cleanup();
