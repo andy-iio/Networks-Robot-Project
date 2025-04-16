@@ -1,4 +1,4 @@
-//milestone 2 - andy g
+//milestone 2
 
 #include "mysocket.h"
 
@@ -6,11 +6,6 @@
 //dynamically allocates memory for the Buffer
 
 MySocket::MySocket(SocketType type, std::string ipAddress, unsigned int port, ConnectionType connType, unsigned int bufferSize) {
-    WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        throw std::runtime_error("WSAStartup failed");
-    }
-
     mySocket = type;
     IPAddr = ipAddress;
     Port = port;
@@ -28,7 +23,7 @@ MySocket::MySocket(SocketType type, std::string ipAddress, unsigned int port, Co
     else {
         ConnectionSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     }
-    if (ConnectionSocket == INVALID_SOCKET) {
+    if (ConnectionSocket < 0) {
         Cleanup();
         throw std::runtime_error("couldnt create socket");
     }
@@ -40,10 +35,12 @@ MySocket::MySocket(SocketType type, std::string ipAddress, unsigned int port, Co
     if (mySocket == SERVER) {
         SvrAddr.sin_addr.s_addr = INADDR_ANY;
 
-        if (bind(ConnectionSocket, (struct sockaddr*)&SvrAddr, sizeof(SvrAddr)) == SOCKET_ERROR) {
+        if (bind(ConnectionSocket, (struct sockaddr*)&SvrAddr, sizeof(SvrAddr)) < 0) {
+            perror("Bind failed");
             Cleanup();
             throw std::runtime_error("couldnt bind");
         }
+        std::cout << "socket bound to port " << Port << std::endl;
     }
     else if (mySocket == CLIENT) {
         inet_pton(AF_INET, IPAddr.c_str(), &SvrAddr.sin_addr);
@@ -65,7 +62,7 @@ void MySocket::ConnectTCP() {
         throw std::runtime_error("TCP connection already established");
     }
 
-    if (connect(ConnectionSocket, (struct sockaddr*)&SvrAddr, sizeof(SvrAddr)) == SOCKET_ERROR) {
+    if (connect(ConnectionSocket, (struct sockaddr*)&SvrAddr, sizeof(SvrAddr)) < 0) {
         throw std::runtime_error("Could not connect");
     }
 
@@ -83,11 +80,11 @@ void MySocket::DisconnectTCP() {
     }
 
     //close the socket
-    closesocket(ConnectionSocket);
+    close(ConnectionSocket);
 
     //create a new socket for later connections
     ConnectionSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (ConnectionSocket == INVALID_SOCKET) {
+    if (ConnectionSocket < 0) {
         throw std::runtime_error("Couldnt create new socket after disconnecting");
     }
 
@@ -111,8 +108,12 @@ void MySocket::SendData(const char* data, int size) {
             (struct sockaddr*)&SvrAddr, sizeof(SvrAddr));
     }
 
-    if (bytesSent == SOCKET_ERROR) {
+    if (bytesSent < 0) {
+        std::cerr << "Error sending data. errno: " << errno << " (" << strerror(errno) << ")" << std::endl; // Log errno
         throw std::runtime_error("Error sending data");
+    }
+    else {
+        std::cout << "Successfully sent " << bytesSent << " bytes." << std::endl; // Log success and size
     }
 }
 
@@ -132,16 +133,22 @@ int MySocket::GetData(char* destination) {
     }
     else { //recvfrom for udp
         sockaddr_in senderAddr;
-        int addrLen = sizeof(senderAddr);
+        socklen_t addrLen = sizeof(senderAddr);
         bytesReceived = recvfrom(ConnectionSocket, Buffer, MaxSize, 0,
             (struct sockaddr*)&senderAddr, &addrLen);
     }
 
-    if (bytesReceived == SOCKET_ERROR) {
+    if (bytesReceived < 0) {
+        std::cerr << "Error receiving data. errno: " << errno << " (" << strerror(errno) << ")" << std::endl; // Log errno
         throw std::runtime_error("Error receiving data");
     }
-
-    memcpy(destination, Buffer, bytesReceived);
+    else if (bytesReceived == 0) {
+        std::cout << "GetData received 0 bytes (graceful shutdown from peer?)." << std::endl;
+    }
+    else {
+        std::cout << "GetData received " << bytesReceived << " bytes." << std::endl; // Log success and size
+        memcpy(destination, Buffer, bytesReceived);
+    }
     return bytesReceived;
 }
 
@@ -187,15 +194,13 @@ void MySocket::SetType(SocketType type) {
 
 //cleans up and closes the socket
 void MySocket::Cleanup() {
-    if (ConnectionSocket != INVALID_SOCKET) {
-        closesocket(ConnectionSocket);
-        ConnectionSocket = INVALID_SOCKET;
+    if (ConnectionSocket >= 0) {
+        close(ConnectionSocket);
+        ConnectionSocket = -1;
     }
 
     if (Buffer != nullptr) {
         delete[] Buffer;
         Buffer = nullptr;
     }
-
-    WSACleanup();
 }
