@@ -1,13 +1,14 @@
-//milestone 2 - andyg
+//milestone 2
 #pragma once
 
 #include <string>
-#include <winsock2.h>
-#include <ws2tcpip.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 #include <iostream>
 #include <stdexcept>
-
-#pragma comment(lib, "Ws2_32.lib")
+#include <cstring>
 
 enum SocketType { CLIENT, SERVER };
 enum ConnectionType { TCP, UDP };
@@ -17,8 +18,8 @@ const int DEFAULT_SIZE = 1024;
 class MySocket {
 private:
     char* Buffer;//to dynamically allocate RAW buffer space for communication activities
-    SOCKET WelcomeSocket;//used by a MySocket object configured as a TCP/IP Server
-    SOCKET ConnectionSocket;//used for client/server communications (both TCP and UDP)
+    int WelcomeSocket;//used by a MySocket object configured as a TCP/IP Server
+    int ConnectionSocket;//used for client/server communications (both TCP and UDP)
     struct sockaddr_in SvrAddr;//to store connection information
     SocketType mySocket;//t to hold the type of socket the MySocket object is initialized to
     std::string IPAddr;//to hold the IPv4 IP Address string
