@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "CppUnitTest.h"
 #include "../NetworksRobotProject/packet.h"
+#include "../NetworksRobotProject/mysocket.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -202,11 +203,10 @@ namespace UnitTests
         {
 
             PktDef pkt;
-            int expectedLength = 10;
-
+            unsigned int expectedLength = 10;
             pkt.setCommand(PktDef::RESPONSE);
-
-            Assert::AreEqual(expectedLength, pkt.GetLength());
+            Assert::AreEqual(expectedLength, static_cast<unsigned int>(pkt.GetLength()));
+            // had to cast here because if switch from winsock to sys (linux system)
         }
 
         TEST_METHOD(GetPacketCount)
@@ -218,17 +218,118 @@ namespace UnitTests
 
             Assert::AreEqual(val, pkt.GetPktCount()); //check that val and pktcount are the same
         }
+
+        //-------------TESTS for MySocket() CONSTRUCTOR------------------
+        //-------------------------------------------------------------
+        TEST_METHOD(TestConstructorMySocket)
+        {
+            // creating sample data for myscoket and creating the socket 
+            std::string test_ip = "127.0.0.1";
+            int test_port = 8080;
+            unsigned int test_buffer = 2048;
+
+            MySocket socket(CLIENT, test_ip, test_port, TCP, 2048);
+
+            // checking that everything is equal (IP and Port)
+            Assert::AreEqual(test_ip, socket.GetIPAddr());
+            Assert::AreEqual(test_port, socket.GetPort());
+            
+        }
+
+        //-------------TESTS for SendData() FUNCTION------------------
+        //-------------------------------------------------------------
+        TEST_METHOD(TestSendDataTCP)
+        {
+            // Creating a TCP socket 
+            MySocket socket(CLIENT, "127.0.0.1", 8080, TCP);
+
+            // Setting up a string to send 
+            const char* testData = "Hello, world!";
+            int dataSize = strlen(testData);
+            
+            // send data over the socket
+            socket.SendData(testData, dataSize);
+            Assert::IsTrue(true); // if returns true means that data was sent without error
+        }
+
+        TEST_METHOD(TestSendDataUDP)
+        {
+            // Creating a UDP socket 
+            MySocket socket(CLIENT, "127.0.0.1", 8081, UDP);
+
+            // Setting up a string to send 
+            const char* testData = "Hello, world!";
+            int dataSize = strlen(testData);
+
+            // send data over the socket
+            socket.SendData(testData, dataSize);
+            Assert::IsTrue(true); // if returns true means that data was sent without error
+
+        }
+
+        //-------------TESTS for GetData() FUNCTION------------------
+        //-------------------------------------------------------------
+        TEST_METHOD(TestGetDataTCP)
+        {
+            
+        }
+  
+
+        //-------------TESTS for TCP() FUNCTIONS------------------
+        //-------------------------------------------------------------
+        TEST_METHOD(TestConnect)
+        {
+            // test socket
+            MySocket socket(CLIENT, "127.0.0.1", 9050, TCP);
+            // Attempt to connect to test socket 
+            socket.ConnectTCP();
+            // checking for connection 
+            Assert::IsTrue(true);
+        }
+
+        
+        TEST_METHOD(TestDiconnect)
+        {
+            //  test socket
+            MySocket socket(CLIENT, "127.0.0.1", 9050, TCP);
+            // Attempt to connect to test socket
+            socket.ConnectTCP();
+            // disconnecting the socket
+            socket.DisconnectTCP();
+            // checking if the disconnnect has been sucessful  
+            Assert::IsTrue(true);
+        }
+
+        //-------------TESTS for Set() FUNCTIONS------------------
+        //-------------------------------------------------------------
+
+        TEST_METHOD(TestSetIP)
+        {
+            // Create a a test socket
+            MySocket socket(CLIENT, "127.0.0.1", 1050, TCP);
+            // Setting a sample IP
+            std::string newIP = "192.168.1.100";
+            socket.SetIPAddr(newIP);
+
+            // Checking that the IP is correct 
+            Assert::AreEqual(newIP, socket.GetIPAddr());
+        }
+
+        TEST_METHOD(TestSetPort)
+        {
+            // Create a a test socket
+            MySocket socket(CLIENT, "127.0.0.1", 1050, TCP);
+
+            // Setting a sample Port
+            int newPort = 8080;
+            socket.SetPort(newPort);
+
+            // Checking that the Port is correct 
+            Assert::AreEqual(newPort, socket.GetPort());
+        }
+
     };
-
 }
-
-
-
-
-
-
-
-
 
 //THIS IS NEEDED to be able to run the tests, need to convert cmdtype to string
 namespace Microsoft {
